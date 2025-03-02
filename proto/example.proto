@@ -1,0 +1,88 @@
+// 指定proto3语法
+syntax = "proto3";
+
+// 导入其他proto定义
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+// 包声明
+package example.proto3;
+
+// 选项示例
+//option java_package = "com.example.generated";
+//option optimize_for = SPEED;
+
+// 枚举类型
+enum UserType {
+  // 保留枚举值
+  UNKNOWN = 0;
+  ADMIN = 1;
+  GUEST = 2;
+}
+
+// 包含所有主要类型的消息
+message AllTypesDemo {
+  // 基本标量类型
+  int32 int32_field = 1;
+  int64 int64_field = 2;
+  uint32 uint32_field = 3;
+  uint64 uint64_field = 4;
+  sint32 sint32_field = 5;  // 对负数编码更高效
+  sint64 sint64_field = 6;
+  fixed32 fixed32_field = 7;  // 固定4字节，适用于值>2^28
+  fixed64 fixed64_field = 8;  // 固定8字节，适用于值>2^56
+  sfixed32 sfixed32_field = 9; // 4字节有符号数
+  sfixed64 sfixed64_field = 10; // 8字节有符号数
+  float float_field = 11;
+  double double_field = 12;
+  bool bool_field = 13;
+  string string_field = 14;
+  bytes bytes_field = 15;
+
+  // 数组类型（repeated修饰）
+  repeated int32 repeated_int32 = 16 [packed = true]; // packed编码格式
+  repeated string repeated_string = 17;
+
+  // 嵌套消息
+  NestedMessage nested_message = 18;
+
+  // Oneof类型（同一时间只能设置其中一个字段）
+  oneof test_oneof {
+    int32 oneof_int32 = 19;
+    string oneof_string = 20;
+  }
+
+  // Map类型
+  map<string, int32> map_field = 21;
+
+  // 使用导入的类型
+  google.protobuf.Timestamp timestamp_field = 22;
+  // 使用Any类型
+  google.protobuf.Any any_field = 24;
+
+  // 枚举类型字段
+  UserType user_type = 23;
+
+  // 保留字段号
+  // reserved 25 to 26;
+  // 保留字段名
+  // reserved "deprecated_field";
+
+  // 嵌套消息定义
+  message NestedMessage {
+    int32 id = 1;
+    string name = 2;
+  }
+}
+
+
+
+// 服务定义（RPC服务）
+service ExampleService {
+  // RPC方法定义
+  rpc ProcessData(AllTypesDemo) returns (AllTypesDemo);
+  //{
+    // 方法选项
+    // option deprecated = true; // 标记为废弃
+  //}
+}
