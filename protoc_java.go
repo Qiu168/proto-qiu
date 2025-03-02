@@ -48,7 +48,7 @@ func (jp *JavaProtoc) generate() error {
 
 	// 为每个 Message 生成 Java 类
 	for _, msg := range jp.Messages {
-		fileStr.WriteString(jp.generateMessageClass(msg))
+		fileStr.WriteString(jp.generateMessageClass(msg, false))
 	}
 
 	// 为每个 Enum 生成 Java 枚举
@@ -66,28 +66,37 @@ func (jp *JavaProtoc) generate() error {
 	return nil
 }
 
-func (jp *JavaProtoc) generateMessageClass(msg *Message) string {
+func (jp *JavaProtoc) generateMessageClass(msg *Message, inner bool) string {
 	className := toCamelCase(msg.Name, true)
 
 	var builder strings.Builder
 
 	// 生成包声明
-	builder.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
+	if !inner {
+		builder.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
+	}
 
 	// 类声明
-	builder.WriteString(fmt.Sprintf("public final class %s {\n", className))
+	if inner {
+		builder.WriteString(fmt.Sprintf("public static class %s {\n", className))
+	} else {
+		builder.WriteString(fmt.Sprintf("public final class %s {\n", className))
+	}
 
 	// 生成字段声明
 	for _, field := range msg.Fields {
 		javaType := toJavaType(field)
-		builder.WriteString(fmt.Sprintf("    private %s %s;\n", javaType, field.Name))
+		builder.WriteString(fmt.Sprintf("    private %s %s;\n", javaType, toCamelCase(field.Name, false)))
 	}
 
 	// 生成构造方法
 	builder.WriteString("\n    public " + className + "() {\n")
 	for _, field := range msg.Fields {
 		if field.Repeated {
-			builder.WriteString(fmt.Sprintf("        this.%s = new java.util.ArrayList<>();\n", field.Name))
+			builder.WriteString(fmt.Sprintf("        this.%s = new java.util.ArrayList<>();\n", toCamelCase(field.Name, false)))
+		}
+		if field.MapInfo != nil {
+			builder.WriteString(fmt.Sprintf("        this.%s = new java.util.HashMap<>();\n", toCamelCase(field.Name, false)))
 		}
 	}
 	builder.WriteString("    }\n")
@@ -114,6 +123,11 @@ func (jp *JavaProtoc) generateMessageClass(msg *Message) string {
 			builder.WriteString(fmt.Sprintf("        %s,\n", strings.ToUpper(f.Name)))
 		}
 		builder.WriteString("        NOT_SET\n    }\n")
+	}
+
+	// inner class
+	for _, innerMsg := range msg.InnerMessages {
+		builder.WriteString(jp.generateMessageClass(innerMsg, true))
 	}
 
 	builder.WriteString("}\n")
@@ -178,7 +192,7 @@ func (jp *JavaProtoc) generateEnum(packagePath string, enum *Enum) string {
 
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
-	builder.WriteString(fmt.Sprintf("Public enum %s {\n", className))
+	builder.WriteString(fmt.Sprintf("public enum %s {\n", className))
 
 	for i, value := range enum.Values {
 		if i > 0 {
@@ -188,10 +202,10 @@ func (jp *JavaProtoc) generateEnum(packagePath string, enum *Enum) string {
 	}
 
 	builder.WriteString(";\n\n")
-	builder.WriteString("    private final int Value;\n\n")
-	builder.WriteString(fmt.Sprintf("    %s(int Value) {\n", className))
+	builder.WriteString("    private final int value;\n\n")
+	builder.WriteString(fmt.Sprintf("    %s(int value) {\n", className))
 	builder.WriteString("        this.Value = Value;\n    }\n\n")
-	builder.WriteString("    Public int getNumber() {\n        return Value;\n    }\n")
+	builder.WriteString("    public int getNumber() {\n        return value;\n    }\n")
 	builder.WriteString("}\n")
 
 	return builder.String()

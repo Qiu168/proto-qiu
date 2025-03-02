@@ -21,7 +21,7 @@ func TestGenerateMessageClass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	messageClass := protoc.generateMessageClass(protoc.Messages[0])
+	messageClass := protoc.generateMessageClass(protoc.Messages[0], false)
 	// print messageClass
 	fmt.Println(messageClass)
 }
@@ -31,9 +31,20 @@ func TestGenerateMessageClass2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	messageClass := protoc.generateMessageClass(protoc.Messages[1])
+	messageClass := protoc.generateMessageClass(protoc.Messages[1], false)
 	// print messageClass
 	fmt.Println(messageClass)
+}
+
+func TestGenerateEnum(t *testing.T) {
+	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	enum := protoc.Enums[0]
+	enumClass := protoc.generateEnum("", enum)
+	// print enumClass
+	fmt.Println(enumClass)
 }
 
 func TestToJavaType(t *testing.T) {
