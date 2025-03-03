@@ -1,8 +1,7 @@
-package main
+package constant
 
-// 类型相关常量
+// proto相关常量
 const (
-	// 基本类型
 	TypeInt32    = "int32"
 	TypeInt64    = "int64"
 	TypeUint32   = "uint32"
@@ -20,7 +19,6 @@ const (
 	TypeSfixed64 = "sfixed64"
 	TypeEnum     = "enum"
 
-	// 关键字
 	KeywordMessage  = "message"
 	KeywordEnum     = "enum"
 	KeywordService  = "service"
@@ -34,7 +32,6 @@ const (
 	KeywordStream   = "stream"
 	KeywordReturns  = "returns"
 
-	// 符号
 	SymbolSemicolon    = ";"
 	SymbolEqual        = "="
 	SymbolLeftBrace    = "{"
@@ -47,29 +44,9 @@ const (
 	SymbolLessThan     = "<"
 	SymbolGreaterThan  = ">"
 
-	// 选项
 	OptionDeprecated = "deprecated"
 	OptionPacked     = "packed"
 
-	// 默认值
 	DefaultTrue  = "true"
 	DefaultFalse = "false"
-)
-
-// 错误信息常量
-const (
-	ErrUnterminatedString = "unterminated string"
-	ErrUnexpectedToken    = "unexpected token: %v"
-	ErrInvalidOptionValue = "invalid option value: %v"
-)
-
-// Java 相关常量
-const (
-	JavaByteArrayOutputStream = "java.io.ByteArrayOutputStream"
-	JavaByteArrayInputStream  = "java.io.ByteArrayInputStream"
-	JavaMapEntry              = "java.util.Map.Entry"
-	JavaHashMap               = "java.util.HashMap"
-	JavaArrayList             = "java.util.ArrayList"
-	JavaList                  = "java.util.List"
-	JavaMap                   = "java.util.Map"
 )
