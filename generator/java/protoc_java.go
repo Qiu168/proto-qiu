@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"proto-qiu/constant"
 	"proto-qiu/generator"
 	"proto-qiu/protoc"
 	"strings"
@@ -93,7 +94,7 @@ func (jp *JavaProtoc) Generate() error {
 	fileStr := jp.generateOuterClass(innerStr)
 
 	// get proto file Name
-	javaFilePath := packagePath + "\\" + toCamelCase(jp.ProtoName, true) + ".java"
+	javaFilePath := packagePath + "\\" + toCamelCase(jp.ProtoName, true) + constant.JavaFileSuffix
 
 	file, err := os.OpenFile(javaFilePath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {

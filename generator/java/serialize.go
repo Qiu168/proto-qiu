@@ -11,7 +11,7 @@ func (jp *JavaProtoc) generateToByteArray(msg *protoc.Message) string {
 	var builder strings.Builder
 	writeMethodHeader(&builder)
 	writeFields(&builder, msg.Fields)
-	writeOneofs(&builder, msg.OneOfs)
+	writeOneOfs(&builder, msg.OneOfs)
 	writeMethodFooter(&builder)
 	return builder.String()
 }
@@ -25,7 +25,9 @@ func writeMethodHeader(builder *strings.Builder) {
 func writeFields(builder *strings.Builder, fields []*protoc.Field) {
 	for _, field := range fields {
 		fieldName := toCamelCase(field.Name, false)
-		if field.MapInfo != nil {
+		if field.Type == protoc.ENUM {
+			writeEnumField(builder, fieldName, field)
+		} else if field.MapInfo != nil {
 			writeMapField(builder, fieldName, field)
 		} else if field.Repeated {
 			writeRepeatedField(builder, fieldName, field)
@@ -35,6 +37,13 @@ func writeFields(builder *strings.Builder, fields []*protoc.Field) {
 	}
 }
 
+func writeEnumField(builder *strings.Builder, fieldName string, field *protoc.Field) {
+	builder.WriteString(fmt.Sprintf("            if (%s != null) {\n", fieldName))
+	builder.WriteString(fmt.Sprintf("                message.writeInt32(stream, %d, %s.getValue());\n",
+		field.FieldNumber, fieldName))
+	builder.WriteString("            }\n")
+}
+
 func writeSimpleField(builder *strings.Builder, fieldName string, field *protoc.Field) {
 	builder.WriteString(fmt.Sprintf("            if (%s != %s) {\n",
 		fieldName, getDefaultValue(field)))
@@ -42,9 +51,9 @@ func writeSimpleField(builder *strings.Builder, fieldName string, field *protoc.
 	builder.WriteString("            }\n")
 }
 
-func writeOneofs(builder *strings.Builder, oneofs []*protoc.OneOf) {
-	for _, oneof := range oneofs {
-		writeOneofField(builder, oneof)
+func writeOneOfs(builder *strings.Builder, oneofs []*protoc.OneOf) {
+	for _, oneOf := range oneofs {
+		writeOneofField(builder, oneOf)
 	}
 }
 
@@ -167,6 +176,7 @@ func generateWriteField(varName string, field *protoc.Field) string {
 	return builder.String()
 }
 
+// ParseFrom
 func (jp *JavaProtoc) generateParseFrom(msg *protoc.Message) string {
 	var builder strings.Builder
 	writeParseFromHeader(&builder, msg.Name)
@@ -195,14 +205,16 @@ func writeParseLoop(builder *strings.Builder) {
 
 func writeParseFromBody(builder *strings.Builder, msg *protoc.Message) {
 	writeFieldCases(builder, msg.Fields)
-	writeOneofCases(builder, msg.OneOfs)
+	writeOneOfCases(builder, msg.OneOfs)
 	writeDefaultCase(builder)
 }
 
 func writeFieldCases(builder *strings.Builder, fields []*protoc.Field) {
 	for _, field := range fields {
 		builder.WriteString(fmt.Sprintf("                    case %d:\n", field.FieldNumber))
-		if field.MapInfo != nil {
+		if field.Type == protoc.ENUM {
+			builder.WriteString(generateReadEnumField(field))
+		} else if field.MapInfo != nil {
 			builder.WriteString(generateReadMapField(field))
 		} else {
 			builder.WriteString(generateReadField(field))
@@ -211,12 +223,27 @@ func writeFieldCases(builder *strings.Builder, fields []*protoc.Field) {
 	}
 }
 
-func writeOneofCases(builder *strings.Builder, oneofs []*protoc.OneOf) {
-	for _, oneof := range oneofs {
-		for _, f := range oneof.Fields {
+func generateReadEnumField(field *protoc.Field) string {
+	var builder strings.Builder
+	fieldName := toCamelCase(field.Name, false)
+
+	if field.Repeated {
+		builder.WriteString(fmt.Sprintf("                    result.%s.add(%s.forNumber(message.readInt32(stream)));\n",
+			fieldName, toCamelCase(field.TypeName, true)))
+	} else {
+		builder.WriteString(fmt.Sprintf("                    result.%s = %s.forNumber(message.readInt32(stream));\n",
+			fieldName, toCamelCase(field.TypeName, true)))
+	}
+
+	return builder.String()
+}
+
+func writeOneOfCases(builder *strings.Builder, oneofs []*protoc.OneOf) {
+	for _, oneOf := range oneofs {
+		for _, f := range oneOf.Fields {
 			builder.WriteString(fmt.Sprintf("                    case %d: // oneof %s\n",
-				f.FieldNumber, oneof.Name))
-			builder.WriteString(generateOneofReadField(f, oneof))
+				f.FieldNumber, oneOf.Name))
+			builder.WriteString(generateOneofReadField(f, oneOf))
 			builder.WriteString("                        break;\n")
 		}
 	}
@@ -436,13 +463,4 @@ func generateMapValueRead(valueType string) string {
 		return fmt.Sprintf("                                byte[] bytes = message.readBytes(mapStream);\n"+
 			"                                value = %s.parseFrom(bytes);\n", toCamelCase(valueType, true))
 	}
-}
-
-func getElementType(field *protoc.Field) string {
-	if field.MapInfo != nil {
-		keyType := toJavaType(&protoc.Field{TypeName: field.MapInfo.KeyType})
-		valueType := toJavaType(&protoc.Field{TypeName: field.MapInfo.ValueType})
-		return fmt.Sprintf("java.util.Map.Entry<%s, %s>", boxed(keyType), boxed(valueType))
-	}
-	return boxed(toJavaType(&protoc.Field{TypeName: field.TypeName}))
 }

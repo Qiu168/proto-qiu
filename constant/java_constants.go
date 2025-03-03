@@ -10,6 +10,19 @@ const (
 	JavaList                  = "java.util.List"
 	JavaMap                   = "java.util.Map"
 	JavaString                = "java.lang.String"
+	JavaInteger               = "java.lang.Integer"
+	JavaBoxedFloat            = "java.lang.Float"
+	JavaFloat                 = "float"
+	JavaBoxedDouble           = "java.lang.Double"
+	JavaDouble                = "double"
+	JavaInt                   = "int"
+	JavaLong                  = "long"
+	JavaBoxedLong             = "java.lang.Long"
+	JavaBoolean               = "boolean"
+	JavaBoxedBoolean          = "java.lang.Boolean"
+	JavaByteArray             = "byte[]"
 
-	javaFileSuffix = ".java"
+	JavaFileSuffix = ".java"
+
+	GeneratedAnnotation = "@javax.annotation.Generated(\"by proto-qiu\")\n"
 )
