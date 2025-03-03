@@ -42,9 +42,11 @@ func (jp *JavaProtoc) generate() error {
 	// 创建包对应的目录
 	var fileStr strings.Builder
 	packagePath := filepath.Join(jp.JavaOutput, strings.Replace(jp.PackageName, ".", "/", -1))
-	if err := os.MkdirAll(packagePath, 0755); err != nil {
+	if err := os.MkdirAll(packagePath, 0777); err != nil {
 		return fmt.Errorf("failed to create package dir: %v", err)
 	}
+
+	fileStr.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
 
 	// 为每个 Message 生成 Java 类
 	for _, msg := range jp.Messages {
@@ -57,7 +59,21 @@ func (jp *JavaProtoc) generate() error {
 	}
 	// get proto file Name
 	protoFileName := strings.Split(filepath.Base(jp.ProtoFilePath), ".")[0]
-	err := os.WriteFile(jp.JavaOutput+protoFileName+".java", []byte(jp.JavaOutput), 0644)
+	javaFilePath := jp.JavaOutput + protoFileName + ".java"
+
+	file, err := os.OpenFile(javaFilePath, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		fmt.Println("无法打开或创建文件:", err)
+		return err
+	}
+	defer file.Close()
+
+	err = file.Truncate(0)
+	if err != nil {
+		fmt.Println("无法清空文件:", err)
+		return err
+	}
+	_, err = file.WriteString(fileStr.String())
 
 	if err != nil {
 		return fmt.Errorf("failed to write proto file: %v", err)
@@ -70,11 +86,6 @@ func (jp *JavaProtoc) generateMessageClass(msg *Message, inner bool) string {
 	className := toCamelCase(msg.Name, true)
 
 	var builder strings.Builder
-
-	// 生成包声明
-	if !inner {
-		builder.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
-	}
 
 	// 类声明
 	if inner {
@@ -92,12 +103,12 @@ func (jp *JavaProtoc) generateMessageClass(msg *Message, inner bool) string {
 	// 生成构造方法
 	builder.WriteString("\n    public " + className + "() {\n")
 	for _, field := range msg.Fields {
-		if field.Repeated {
-			builder.WriteString(fmt.Sprintf("        this.%s = new java.util.ArrayList<>();\n", toCamelCase(field.Name, false)))
-		}
 		if field.MapInfo != nil {
 			builder.WriteString(fmt.Sprintf("        this.%s = new java.util.HashMap<>();\n", toCamelCase(field.Name, false)))
+		} else if field.Repeated {
+			builder.WriteString(fmt.Sprintf("        this.%s = new java.util.ArrayList<>();\n", toCamelCase(field.Name, false)))
 		}
+
 	}
 	builder.WriteString("    }\n")
 
@@ -106,11 +117,11 @@ func (jp *JavaProtoc) generateMessageClass(msg *Message, inner bool) string {
 		javaType := toJavaType(field)
 		// Getter
 		builder.WriteString(fmt.Sprintf("\n    public %s get%s() {\n", javaType, toCamelCase(field.Name, true)))
-		builder.WriteString(fmt.Sprintf("        return this.%s;\n    }\n", field.Name))
+		builder.WriteString(fmt.Sprintf("        return this.%s;\n    }\n", toCamelCase(field.Name, false)))
 		// Setter
 		builder.WriteString(fmt.Sprintf("\n    public void set%s(%s %s) {\n",
-			toCamelCase(field.Name, true), javaType, field.Name))
-		builder.WriteString(fmt.Sprintf("        this.%s = %s;\n    }\n", field.Name, field.Name))
+			toCamelCase(field.Name, true), javaType, toCamelCase(field.Name, false)))
+		builder.WriteString(fmt.Sprintf("        this.%s = %s;\n    }\n", toCamelCase(field.Name, false), toCamelCase(field.Name, false)))
 	}
 
 	// 处理 oneof 字段
@@ -191,7 +202,6 @@ func (jp *JavaProtoc) generateEnum(packagePath string, enum *Enum) string {
 	className := toCamelCase(enum.Name, true)
 
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
 	builder.WriteString(fmt.Sprintf("public enum %s {\n", className))
 
 	for i, value := range enum.Values {
@@ -204,7 +214,7 @@ func (jp *JavaProtoc) generateEnum(packagePath string, enum *Enum) string {
 	builder.WriteString(";\n\n")
 	builder.WriteString("    private final int value;\n\n")
 	builder.WriteString(fmt.Sprintf("    %s(int value) {\n", className))
-	builder.WriteString("        this.Value = Value;\n    }\n\n")
+	builder.WriteString("        this.value = value;\n    }\n\n")
 	builder.WriteString("    public int getNumber() {\n        return value;\n    }\n")
 	builder.WriteString("}\n")
 
