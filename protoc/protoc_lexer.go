@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"proto-qiu/constant"
 	"strings"
 	"unicode"
 )
@@ -78,7 +79,7 @@ func (l *Lexer) skipWhitespace() {
 		}
 
 		// 跳过多行注释 "/* ... */"
-		if r == '/' {
+		if r == constant.SymbolSlash {
 			nextR, _ := l.readRune()
 			if nextR == '*' {
 				for {

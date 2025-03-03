@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"proto-qiu/constant"
 	"proto-qiu/generator/java"
 	"strings"
 )
@@ -11,17 +12,17 @@ import (
 func main() {
 	cmd := parseCmd()
 	if cmd.version {
-		fmt.Println("version: 1.0.0")
+		fmt.Println(constant.QiuProtoVersion)
 	} else {
 		var protoPaths []string
 		for _, path := range cmd.protocPath {
-			if strings.HasSuffix(path, ".proto") {
+			if strings.HasSuffix(path, constant.ProtoFileSuffix) {
 				protoPaths = append(protoPaths, path)
 			} else {
 				// 获取path目录下的所有文件
 				paths := getDirFiles(path)
 				for _, p := range paths {
-					if strings.HasSuffix(p, ".proto") {
+					if strings.HasSuffix(p, constant.ProtoFileSuffix) {
 						protoPaths = append(protoPaths, p)
 					}
 				}

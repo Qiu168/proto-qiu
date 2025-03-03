@@ -4,6 +4,7 @@ package protoc
 import (
 	"fmt"
 	"io"
+	"proto-qiu/constant"
 	"strconv"
 )
 
@@ -60,31 +61,31 @@ func (p *Parser) Parse() (*Protoc, error) {
 
 	for p.currentToken.Type != TokenEOF {
 		switch p.currentToken.Value {
-		case "syntax":
+		case constant.KeywordSyntax:
 			if err := p.parseSyntax(); err != nil {
 				return nil, err
 			}
-		case "package":
+		case constant.KeywordPackage:
 			if err := p.parsePackage(); err != nil {
 				return nil, err
 			}
-		case "import":
+		case constant.KeywordImport:
 			if err := p.parseImport(); err != nil {
 				return nil, err
 			}
-		case "message":
+		case constant.KeywordMessage:
 			msg, err := p.parseMessage()
 			if err != nil {
 				return nil, err
 			}
 			p.protoc.Messages = append(p.protoc.Messages, msg)
-		case "enum":
+		case constant.KeywordEnum:
 			enum, err := p.parseEnum()
 			if err != nil {
 				return nil, err
 			}
 			p.protoc.Enums = append(p.protoc.Enums, enum)
-		case "service":
+		case constant.KeywordService:
 			service, err := p.parseService()
 			if err != nil {
 				return nil, err
@@ -106,7 +107,7 @@ func (p *Parser) parseSyntax() error {
 	if err := p.advance(); err != nil { // 跳过 'syntax'
 		return err
 	}
-	if err := p.expect(TokenSymbol, "="); err != nil {
+	if err := p.expect(TokenSymbol, constant.SymbolEqual); err != nil {
 		return err
 	}
 	if err := p.advance(); err != nil { // 跳过 '='
@@ -119,7 +120,7 @@ func (p *Parser) parseSyntax() error {
 	if err := p.advance(); err != nil { // 跳过字符串
 		return err
 	}
-	return p.expect(TokenSymbol, ";")
+	return p.expect(TokenSymbol, constant.SymbolSemicolon)
 }
 
 func (p *Parser) parsePackage() error {
@@ -127,14 +128,14 @@ func (p *Parser) parsePackage() error {
 		return err
 	}
 
-	for p.currentToken.Value != ";" {
+	for p.currentToken.Value != constant.SymbolSemicolon {
 		p.protoc.PackageName += p.currentToken.Value
 		if err := p.advance(); err != nil {
 			return err
 		}
 	}
 
-	return p.expect(TokenSymbol, ";")
+	return p.expect(TokenSymbol, constant.SymbolSemicolon)
 }
 
 func (p *Parser) parseImport() error {
@@ -142,7 +143,7 @@ func (p *Parser) parseImport() error {
 	if err := p.advance(); err != nil { // 跳过 'import'
 		return err
 	}
-	if p.currentToken.Value == "public" {
+	if p.currentToken.Value == constant.KeywordPublic {
 		imp.Public = true
 		if err := p.advance(); err != nil {
 			return err
@@ -156,7 +157,7 @@ func (p *Parser) parseImport() error {
 	if err := p.advance(); err != nil { // 跳过字符串
 		return err
 	}
-	return p.expect(TokenSymbol, ";")
+	return p.expect(TokenSymbol, constant.SymbolSemicolon)
 }
 
 func (p *Parser) parseMessage() (*Message, error) {
@@ -173,7 +174,7 @@ func (p *Parser) parseMessage() (*Message, error) {
 	if err := p.advance(); err != nil {
 		return nil, err
 	}
-	if err := p.expect(TokenSymbol, "{"); err != nil {
+	if err := p.expect(TokenSymbol, constant.SymbolLeftBrace); err != nil {
 		return nil, err
 	}
 	if err := p.advance(); err != nil { // 跳过 '{'
@@ -181,22 +182,22 @@ func (p *Parser) parseMessage() (*Message, error) {
 	}
 
 	// 解析消息体内容
-	for p.currentToken.Value != "}" {
+	for p.currentToken.Value != constant.SymbolRightBrace {
 		switch p.currentToken.Value {
-		case "message":
+		case constant.KeywordMessage:
 			nestedMsg, err := p.parseMessage()
 			if err != nil {
 				return nil, err
 			}
 			msg.InnerMessages = append(msg.InnerMessages, nestedMsg)
-		case "enum":
+		case constant.KeywordEnum:
 			enum, err := p.parseEnum()
 			if err != nil {
 				return nil, err
 			}
 			enum.SuperMessage = msg
 			msg.Enums = append(msg.Enums, enum)
-		case "oneof":
+		case constant.KeywordOneof:
 			oneof, err := p.parseOneOf()
 			if err != nil {
 				return nil, err
@@ -219,11 +220,11 @@ func (p *Parser) parseMessage() (*Message, error) {
 
 func (p *Parser) parseField() (*Field, error) {
 	field := &Field{Options: &FieldOptions{}}
-	if p.currentToken.Value == "map" {
+	if p.currentToken.Value == constant.KeywordMap {
 		if err := p.advance(); err != nil {
 			return nil, err
 		}
-		err := p.expectAndAdvance(TokenSymbol, "<")
+		err := p.expectAndAdvance(TokenSymbol, constant.SymbolLessThan)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +237,7 @@ func (p *Parser) parseField() (*Field, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = p.expectAndAdvance(TokenSymbol, ",")
+		err = p.expectAndAdvance(TokenSymbol, constant.SymbolComma)
 		if err != nil {
 			return nil, err
 		}
@@ -257,14 +258,14 @@ func (p *Parser) parseField() (*Field, error) {
 		if mapMessage != nil {
 			p.protoc.Messages = append(p.protoc.Messages, mapMessage)
 		}
-		err = p.expect(TokenSymbol, ">")
+		err = p.expect(TokenSymbol, constant.SymbolGreaterThan)
 		if err != nil {
 			return nil, err
 		}
 		field.Repeated = true
 		p.currentToken.Value = keyType + "_" + valueType + "_map_entry"
 	}
-	if p.currentToken.Value == "repeated" {
+	if p.currentToken.Value == constant.KeywordRepeated {
 		field.Repeated = true
 		if err := p.advance(); err != nil {
 			return nil, err
@@ -302,7 +303,7 @@ func (p *Parser) parseField() (*Field, error) {
 	}
 
 	// 解析选项（如 '[Deprecated = true]'）
-	if p.currentToken.Value == "[" {
+	if p.currentToken.Value == constant.SymbolLeftBracket {
 		if err := p.parseFieldOptions(field); err != nil {
 			return nil, err
 		}
@@ -326,7 +327,7 @@ func (p *Parser) parseFieldOptions(field *Field) error {
 		return err
 	}
 
-	for p.currentToken.Value != "]" {
+	for p.currentToken.Value != constant.SymbolRightBracket {
 		// 解析选项名（如 "Deprecated"）
 		optionName := p.currentToken.Value
 		if err := p.advance(); err != nil {
@@ -346,9 +347,9 @@ func (p *Parser) parseFieldOptions(field *Field) error {
 		switch p.currentToken.Type {
 		case TokenIdent:
 			switch p.currentToken.Value {
-			case "true":
+			case constant.DefaultTrue:
 				optionValue = true
-			case "false":
+			case constant.DefaultFalse:
 				optionValue = false
 			default:
 				optionValue = p.currentToken.Value // 自定义选项（如 "foo.bar"）
@@ -364,9 +365,9 @@ func (p *Parser) parseFieldOptions(field *Field) error {
 
 		// 记录选项（此处简化为处理已知选项）
 		switch optionName {
-		case "deprecated":
+		case constant.OptionDeprecated:
 			field.Options.Deprecated = optionValue.(bool)
-		case "packed":
+		case constant.OptionPacked:
 			field.Options.Packed = optionValue.(bool)
 		}
 
@@ -375,7 +376,7 @@ func (p *Parser) parseFieldOptions(field *Field) error {
 		}
 
 		// 跳过可能的逗号分隔符
-		if p.currentToken.Value == "," {
+		if p.currentToken.Value == constant.SymbolComma {
 			if err := p.advance(); err != nil {
 				return err
 			}
@@ -397,14 +398,14 @@ func (p *Parser) parseOneOf() (*OneOf, error) {
 	if err := p.advance(); err != nil { // 跳过名称
 		return nil, err
 	}
-	if err := p.expect(TokenSymbol, "{"); err != nil {
+	if err := p.expect(TokenSymbol, constant.SymbolLeftBrace); err != nil {
 		return nil, err
 	}
 	if err := p.advance(); err != nil { // 跳过 '{'
 		return nil, err
 	}
 
-	for p.currentToken.Value != "}" {
+	for p.currentToken.Value != constant.SymbolRightBrace {
 		field, err := p.parseField()
 		if err != nil {
 			return nil, err
@@ -430,15 +431,15 @@ func (p *Parser) parseEnum() (*Enum, error) {
 	if err := p.advance(); err != nil { // 跳过枚举名
 		return nil, err
 	}
-	if err := p.expect(TokenSymbol, "{"); err != nil {
+	if err := p.expect(TokenSymbol, constant.SymbolLeftBrace); err != nil {
 		return nil, err
 	}
 	if err := p.advance(); err != nil { // 跳过 '{'
 		return nil, err
 	}
 
-	for p.currentToken.Value != "}" {
-		if p.currentToken.Value == ";" {
+	for p.currentToken.Value != constant.SymbolRightBrace {
+		if p.currentToken.Value == constant.SymbolSemicolon {
 			if err := p.advance(); err != nil {
 				return nil, err
 			}
@@ -449,7 +450,7 @@ func (p *Parser) parseEnum() (*Enum, error) {
 		if err := p.advance(); err != nil { // 跳过枚举项名
 			return nil, err
 		}
-		if err := p.expect(TokenSymbol, "="); err != nil {
+		if err := p.expect(TokenSymbol, constant.SymbolEqual); err != nil {
 			return nil, err
 		}
 		if err := p.advance(); err != nil { // 跳过 '='
@@ -463,7 +464,7 @@ func (p *Parser) parseEnum() (*Enum, error) {
 		if err := p.advance(); err != nil { // 跳过数字
 			return nil, err
 		}
-		if err := p.expect(TokenSymbol, ";"); err != nil {
+		if err := p.expect(TokenSymbol, constant.SymbolSemicolon); err != nil {
 			return nil, err
 		}
 		if err := p.advance(); err != nil { // 跳过 ';'
@@ -530,7 +531,7 @@ func (p *Parser) parseMethod() (*Method, error) {
 	}
 
 	// 处理客户端流（输入类型前的 "stream"）
-	if p.currentToken.Value == "stream" {
+	if p.currentToken.Value == constant.KeywordStream {
 		method.ClientStreaming = true
 		if err := p.advance(); err != nil { // 跳过 "stream"
 			return nil, err
@@ -550,7 +551,7 @@ func (p *Parser) parseMethod() (*Method, error) {
 	}
 
 	// 解析返回类型
-	if err := p.expect(TokenIdent, "returns"); err != nil {
+	if err := p.expect(TokenIdent, constant.KeywordReturns); err != nil {
 		return nil, err
 	}
 	if err := p.advance(); err != nil { // 跳过 "returns"
@@ -564,7 +565,7 @@ func (p *Parser) parseMethod() (*Method, error) {
 	}
 
 	// 处理服务端流（输出类型前的 "stream"）
-	if p.currentToken.Value == "stream" {
+	if p.currentToken.Value == constant.KeywordStream {
 		method.ServerStreaming = true
 		if err := p.advance(); err != nil { // 跳过 "stream"
 			return nil, err

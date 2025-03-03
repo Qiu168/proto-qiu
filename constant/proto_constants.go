@@ -32,21 +32,13 @@ const (
 	KeywordStream   = "stream"
 	KeywordReturns  = "returns"
 
-	SymbolSemicolon    = ";"
-	SymbolEqual        = "="
-	SymbolLeftBrace    = "{"
-	SymbolRightBrace   = "}"
-	SymbolLeftBracket  = "["
-	SymbolRightBracket = "]"
-	SymbolLeftParen    = "("
-	SymbolRightParen   = ")"
-	SymbolComma        = ","
-	SymbolLessThan     = "<"
-	SymbolGreaterThan  = ">"
-
 	OptionDeprecated = "deprecated"
 	OptionPacked     = "packed"
 
 	DefaultTrue  = "true"
 	DefaultFalse = "false"
+
+	ProtoFileSuffix = ".proto"
+
+	ProtoUsage = "Usage: %s -java_out=[Path] [args...]\n"
 )

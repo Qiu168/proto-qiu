@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"proto-qiu/constant"
 )
 
 type Cmd struct {
@@ -25,5 +26,5 @@ func parseCmd() *Cmd {
 	return cmd
 }
 func printUsage() {
-	fmt.Printf("Usage: %s -java_out=[Path] [args...]\n", os.Args[0])
+	fmt.Printf(constant.ProtoUsage, os.Args[0])
 }

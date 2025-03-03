@@ -9,4 +9,7 @@ const (
 	JavaArrayList             = "java.util.ArrayList"
 	JavaList                  = "java.util.List"
 	JavaMap                   = "java.util.Map"
+	JavaString                = "java.lang.String"
+
+	javaFileSuffix = ".java"
 )
