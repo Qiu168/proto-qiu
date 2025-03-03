@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -41,6 +42,16 @@ func TestNewJavaProtoc(t *testing.T) {
 	// print protoc
 	protoJson, _ := json.MarshalIndent(protoc, "", "\t")
 	fmt.Println(string(protoJson))
+}
+
+func TestGenerateOuterClass(t *testing.T) {
+	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outerClass := protoc.generateOuterClass(strings.Builder{})
+	// print outerClass
+	fmt.Println(outerClass)
 }
 
 func TestGenerateMessageClass(t *testing.T) {

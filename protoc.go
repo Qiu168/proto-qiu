@@ -82,6 +82,7 @@ type Method struct {
 }
 
 type Protoc struct {
+	ProtoName     string
 	SyntaxVersion string
 	PackageName   string
 	Imports       []*Import

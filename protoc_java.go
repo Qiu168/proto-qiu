@@ -29,6 +29,7 @@ func newJavaProtoc(javaOutput, protoFilePath string) (*JavaProtoc, error) {
 		return nil, fmt.Errorf("proto parse error: %v", err)
 	}
 
+	protoc.ProtoName = strings.Split(filepath.Base(protoFilePath), ".")[0]
 	return &JavaProtoc{
 		Protoc:        *protoc,
 		JavaOutput:    javaOutput,
@@ -40,26 +41,28 @@ func newJavaProtoc(javaOutput, protoFilePath string) (*JavaProtoc, error) {
 // generate .java file
 func (jp *JavaProtoc) generate() error {
 	// 创建包对应的目录
-	var fileStr strings.Builder
 	packagePath := filepath.Join(jp.JavaOutput, strings.Replace(jp.PackageName, ".", "/", -1))
 	if err := os.MkdirAll(packagePath, 0777); err != nil {
 		return fmt.Errorf("failed to create package dir: %v", err)
 	}
 
-	fileStr.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
+	var innerStr strings.Builder
 
 	// 为每个 Message 生成 Java 类
 	for _, msg := range jp.Messages {
-		fileStr.WriteString(jp.generateMessageClass(msg, false))
+		innerStr.WriteString(jp.generateMessageClass(msg, true))
 	}
 
 	// 为每个 Enum 生成 Java 枚举
 	for _, enum := range jp.Enums {
-		fileStr.WriteString(jp.generateEnum(packagePath, enum))
+		innerStr.WriteString(jp.generateEnum(packagePath, enum))
 	}
+
+	// 生成外部类
+	fileStr := jp.generateOuterClass(innerStr)
+
 	// get proto file Name
-	protoFileName := strings.Split(filepath.Base(jp.ProtoFilePath), ".")[0]
-	javaFilePath := jp.JavaOutput + protoFileName + ".java"
+	javaFilePath := jp.JavaOutput + jp.ProtoName + ".java"
 
 	file, err := os.OpenFile(javaFilePath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
@@ -73,13 +76,35 @@ func (jp *JavaProtoc) generate() error {
 		fmt.Println("无法清空文件:", err)
 		return err
 	}
-	_, err = file.WriteString(fileStr.String())
+	_, err = file.WriteString(fileStr)
 
 	if err != nil {
 		return fmt.Errorf("failed to write proto file: %v", err)
 	}
 
 	return nil
+}
+
+func (jp *JavaProtoc) generateOuterClass(innerStr strings.Builder) string {
+	var fileStr strings.Builder
+	fileStr.WriteString(fmt.Sprintf("package %s;\n\n", jp.PackageName))
+	var b bool
+	for _, message := range jp.Protoc.Messages {
+		if message.Name == jp.ProtoName {
+			b = true
+		}
+	}
+
+	fileStr.WriteString("@javax.annotation.Generated(\"by proto-qiu\")\n")
+	if b {
+		fileStr.WriteString("public final class " + toCamelCase(jp.ProtoName, true) + "Outer {\n")
+	} else {
+		fileStr.WriteString("public final class " + toCamelCase(jp.ProtoName, true) + " {\n")
+	}
+	fileStr.WriteString(innerStr.String())
+	fileStr.WriteString("}\n")
+
+	return fileStr.String()
 }
 
 func (jp *JavaProtoc) generateMessageClass(msg *Message, inner bool) string {
