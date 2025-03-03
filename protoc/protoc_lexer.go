@@ -1,10 +1,11 @@
 // 词法分析器
-package main
+package protoc
 
 import (
 	"bufio"
 	"errors"
 	"io"
+	"strings"
 	"unicode"
 )
 
@@ -118,47 +119,82 @@ func (l *Lexer) NextToken() (Token, error) {
 	}
 
 	switch {
-	case unicode.IsLetter(r) || r == '_' || r == '.':
-		ident := string(r)
-		for {
-			r, err = l.readRune()
-			if err != nil || (!unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' && r != '.') {
-				if err == nil {
-					l.unreadRune()
-				}
-				return Token{Type: TokenIdent, Value: ident}, nil
-			}
-			ident += string(r)
-		}
-
+	case isIdentStart(r):
+		return l.readIdentifier(r)
 	case unicode.IsDigit(r):
-		number := string(r)
-		for {
-			r, err = l.readRune()
-			if err != nil || !unicode.IsDigit(r) {
-				if err == nil {
-					l.unreadRune()
-				}
-				return Token{Type: TokenNumber, Value: number}, nil
-			}
-			number += string(r)
-		}
-
+		return l.readNumber(r)
 	case r == '"' || r == '\'':
-		quote := r
-		str := ""
-		for {
-			r, err = l.readRune()
-			if err != nil {
-				return Token{}, errors.New("unterminated string")
-			}
-			if r == quote {
-				return Token{Type: TokenString, Value: str}, nil
-			}
-			str += string(r)
-		}
-
+		return l.readString(r)
 	default:
 		return Token{Type: TokenSymbol, Value: string(r)}, nil
+	}
+}
+
+func isIdentStart(r rune) bool {
+	return unicode.IsLetter(r) || r == '_'
+}
+
+func (l *Lexer) readIdentifier(first rune) (Token, error) {
+	var builder strings.Builder
+	builder.WriteRune(first)
+
+	for {
+		r, err := l.readRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return Token{}, err
+		}
+
+		if !isIdentPart(r) {
+			l.unreadRune()
+			break
+		}
+		builder.WriteRune(r)
+	}
+
+	return Token{Type: TokenIdent, Value: builder.String()}, nil
+}
+
+func isIdentPart(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '.'
+}
+
+func (l *Lexer) readNumber(first rune) (Token, error) {
+	var builder strings.Builder
+	builder.WriteRune(first)
+
+	for {
+		r, err := l.readRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return Token{}, err
+		}
+
+		if !unicode.IsDigit(r) {
+			l.unreadRune()
+			break
+		}
+		builder.WriteRune(r)
+	}
+
+	return Token{Type: TokenNumber, Value: builder.String()}, nil
+}
+
+func (l *Lexer) readString(quote rune) (Token, error) {
+	var builder strings.Builder
+
+	for {
+		r, err := l.readRune()
+		if err != nil {
+			return Token{}, errors.New("unterminated string")
+		}
+		if r == quote {
+			return Token{Type: TokenString, Value: builder.String()}, nil
+		}
+		builder.WriteRune(r)
 	}
 }

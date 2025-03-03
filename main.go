@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"proto-qiu/generator/java"
 	"strings"
 )
 
@@ -27,11 +28,11 @@ func main() {
 			}
 		}
 		for _, path := range protoPaths {
-			protoc, err := newJavaProtoc(cmd.javaOutput, path)
+			javaProto, err := java.NewJavaProtoc(cmd.javaOutput, path)
 			if err != nil {
 				panic(fmt.Errorf("parse protoc error: %v", err))
 			}
-			err = protoc.generate()
+			err = javaProto.Generate()
 		}
 
 	}

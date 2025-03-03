@@ -1,6 +1,8 @@
-package main
+package protoc
 
 type WireType int
+
+type Type int
 
 func str2WireType(s string) WireType {
 	switch s {
@@ -25,14 +27,30 @@ const (
 	EndGroup
 	Fixed32
 )
+const (
+	// BASE 基本类型
+	BASE Type = iota
+	// ENUM 枚举类型
+	ENUM
+	// CUSTOM 自定义类型
+	CUSTOM
+	// ONE_OF oneof类型
+	ONE_OF
+	// MAP 映射类型
+	MAP
+	// MESSAGE 消息类型
+	MESSAGE
+)
 
 type MapInfo struct {
 	KeyType   string
 	ValueType string
 }
+
 type Field struct {
 	Name        string
 	TypeName    string // 基础类型或自定义类型（如 "int32", "MyMessage"）
+	Type        Type
 	WireType    WireType
 	FieldNumber int
 	Repeated    bool
@@ -52,6 +70,7 @@ type OneOf struct {
 
 type Message struct {
 	Name          string
+	SuperMessage  *Message `json:"-"`
 	InnerMessages []*Message
 	OneOfs        []*OneOf
 	Fields        []*Field
@@ -59,8 +78,9 @@ type Message struct {
 }
 
 type Enum struct {
-	Name   string
-	Values []*EnumValue
+	Name         string
+	SuperMessage *Message `json:"-"`
+	Values       []*EnumValue
 }
 
 type EnumValue struct {

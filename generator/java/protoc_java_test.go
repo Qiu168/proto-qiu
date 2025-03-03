@@ -1,14 +1,16 @@
-package main
+package java
 
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"proto-qiu/protoc"
 	"strings"
 	"testing"
 )
 
 func TestToJavaType(t *testing.T) {
-	fields := []*Field{
+	fields := []*protoc.Field{
 		{
 			TypeName: "string",
 			Repeated: true,
@@ -35,62 +37,69 @@ func TestToJavaType(t *testing.T) {
 }
 
 func TestNewJavaProtoc(t *testing.T) {
-	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	os.Chdir("../../")
+	proto, err := NewJavaProtoc("", "./proto/example.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
 	// print protoc
-	protoJson, _ := json.MarshalIndent(protoc, "", "\t")
+	protoJson, _ := json.MarshalIndent(proto, "", "\t")
 	fmt.Println(string(protoJson))
 }
 
 func TestGenerateOuterClass(t *testing.T) {
-	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	os.Chdir("../../")
+	proto, err := NewJavaProtoc("", "./proto/example.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	outerClass := protoc.generateOuterClass(strings.Builder{})
+	outerClass := proto.generateOuterClass(strings.Builder{})
 	// print outerClass
 	fmt.Println(outerClass)
 }
 
 func TestGenerateMessageClass(t *testing.T) {
-	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	os.Chdir("../../")
+	proto, err := NewJavaProtoc("", "./proto/example.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	messageClass := protoc.generateMessageClass(protoc.Messages[0], false)
+	messageClass := proto.generateMessageClass(proto.Messages[0], false)
 	// print messageClass
 	fmt.Println(messageClass)
 }
 
 func TestGenerateMessageClass2(t *testing.T) {
-	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	os.Chdir("../../")
+	proto, err := NewJavaProtoc("", "./proto/example.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	messageClass := protoc.generateMessageClass(protoc.Messages[1], false)
+	messageClass := proto.generateMessageClass(proto.Messages[1], false)
 	// print messageClass
 	fmt.Println(messageClass)
 }
 
 func TestGenerateEnum(t *testing.T) {
-	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	os.Chdir("../../")
+	proto, err := NewJavaProtoc("", "./proto/example.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	enum := protoc.Enums[0]
-	enumClass := protoc.generateEnum("", enum)
+	enum := proto.Enums[0]
+	enumClass := proto.generateEnum(enum)
 	// print enumClass
 	fmt.Println(enumClass)
 }
 
 func TestGenerate(t *testing.T) {
-	protoc, err := newJavaProtoc("", "./proto/example.proto")
+	os.Chdir("../../")
+	fmt.Println(os.Getwd())
+	proto, err := NewJavaProtoc("", "./proto/example.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = protoc.generate()
+	err = proto.Generate()
 	if err != nil {
 		t.Fatal(err)
 	}

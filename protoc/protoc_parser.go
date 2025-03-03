@@ -1,5 +1,5 @@
 // 语法分析器
-package main
+package protoc
 
 import (
 	"fmt"
@@ -194,6 +194,7 @@ func (p *Parser) parseMessage() (*Message, error) {
 			if err != nil {
 				return nil, err
 			}
+			enum.SuperMessage = msg
 			msg.Enums = append(msg.Enums, enum)
 		case "oneof":
 			oneof, err := p.parseOneOf()
