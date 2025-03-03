@@ -2,8 +2,7 @@
 syntax = "proto3";
 
 // 导入其他proto定义
-import "google/protobuf/timestamp.proto";
-import "google/protobuf/any.proto";
+import "any.proto";
 
 // 包声明
 package example.proto3;
@@ -55,10 +54,8 @@ message AllTypesDemo {
   // Map类型
   map<string, int32> map_field = 21;
 
-  // 使用导入的类型
-  google.protobuf.Timestamp timestamp_field = 22;
   // 使用Any类型
-  google.protobuf.Any any_field = 24;
+  qiu.protobuf.Any any_field = 24;
 
   // 枚举类型字段
   UserType user_type = 23;
