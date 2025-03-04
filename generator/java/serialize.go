@@ -16,6 +16,15 @@ func (jp *JavaProtoc) generateToByteArray(msg *protoc.Message) string {
 	return builder.String()
 }
 
+// ParseFrom
+func (jp *JavaProtoc) generateParseFrom(msg *protoc.Message) string {
+	var builder strings.Builder
+	writeParseFromHeader(&builder, msg.Name)
+	writeParseFromBody(&builder, msg)
+	writeParseFromFooter(&builder)
+	return builder.String()
+}
+
 func writeMethodHeader(builder *strings.Builder) {
 	builder.WriteString("\n    public byte[] toByteArray() {\n")
 	builder.WriteString("        java.io.ByteArrayOutputStream stream = new java.io.ByteArrayOutputStream();\n")
@@ -39,7 +48,7 @@ func writeFields(builder *strings.Builder, fields []*protoc.Field) {
 
 func writeEnumField(builder *strings.Builder, fieldName string, field *protoc.Field) {
 	builder.WriteString(fmt.Sprintf("            if (%s != null) {\n", fieldName))
-	builder.WriteString(fmt.Sprintf("                message.writeInt32(stream, %d, %s.getValue());\n",
+	builder.WriteString(fmt.Sprintf("                writeInt32(stream, %d, %s.getNumber());\n",
 		field.FieldNumber, fieldName))
 	builder.WriteString("            }\n")
 }
@@ -73,15 +82,15 @@ func writeMethodFooter(builder *strings.Builder) {
 
 // 基本类型序列化
 func writeBasicField(builder *strings.Builder, fieldName, typeName string, fieldNumber int) {
-	builder.WriteString(fmt.Sprintf("        message.write%s(stream, %d, %s);\n",
+	builder.WriteString(fmt.Sprintf("        write%s(stream, %d, %s);\n",
 		toCamelCase(typeName, true), fieldNumber, fieldName))
 }
 
 func writeMessageField(builder *strings.Builder, fieldName string, fieldNumber int) {
 	builder.WriteString(fmt.Sprintf("        if (%s != null) {\n", fieldName))
 	builder.WriteString(fmt.Sprintf("            byte[] bytes = %s.toByteArray();\n", fieldName))
-	builder.WriteString(fmt.Sprintf("            message.writeTag(stream, %d, message.WIRETYPE_LENGTH_DELIMITED);\n", fieldNumber))
-	builder.WriteString("            message.writeBytes(stream, bytes);\n")
+	builder.WriteString(fmt.Sprintf("            writeTag(stream, %d, WIRETYPE_LENGTH_DELIMITED);\n", fieldNumber))
+	builder.WriteString("            writeBytes(stream, bytes);\n")
 	builder.WriteString("        }\n")
 }
 
@@ -111,8 +120,8 @@ func writeMapField(builder *strings.Builder, fieldName string, field *protoc.Fie
 
 // 处理 map 键值序列化
 func writeMapKeyValue(builder *strings.Builder, field *protoc.Field) {
-	builder.WriteString("                message.writeTag(stream, " +
-		strconv.Itoa(field.FieldNumber) + ", message.WIRETYPE_LENGTH_DELIMITED);\n")
+	builder.WriteString("                writeTag(stream, " +
+		strconv.Itoa(field.FieldNumber) + ", WIRETYPE_LENGTH_DELIMITED);\n")
 	builder.WriteString("                java.io.ByteArrayOutputStream mapStream = new java.io.ByteArrayOutputStream();\n")
 
 	keyField := &protoc.Field{TypeName: field.MapInfo.KeyType, FieldNumber: 1}
@@ -121,7 +130,7 @@ func writeMapKeyValue(builder *strings.Builder, field *protoc.Field) {
 	builder.WriteString(generateWriteField("entry.getKey()", keyField))
 	builder.WriteString(generateWriteField("entry.getValue()", valueField))
 	builder.WriteString("                byte[] mapBytes = mapStream.toByteArray();\n")
-	builder.WriteString("                message.writeBytes(stream, mapBytes);\n")
+	builder.WriteString("                writeBytes(stream, mapBytes);\n")
 }
 
 // 处理 oneof 字段序列化
@@ -143,45 +152,36 @@ func generateWriteField(varName string, field *protoc.Field) string {
 	var builder strings.Builder
 	switch field.TypeName {
 	case "int32", "uint32":
-		builder.WriteString(fmt.Sprintf("        message.writeInt32(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeInt32(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "int64", "uint64":
-		builder.WriteString(fmt.Sprintf("        message.writeInt64(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeInt64(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "sint32":
-		builder.WriteString(fmt.Sprintf("        message.writeSint32(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeSint32(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "sint64":
-		builder.WriteString(fmt.Sprintf("        message.writeSint64(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeSint64(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "fixed32", "sfixed32":
-		builder.WriteString(fmt.Sprintf("        message.writeFixed32(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeFixed32(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "fixed64", "sfixed64":
-		builder.WriteString(fmt.Sprintf("        message.writeFixed64(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeFixed64(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "bool":
-		builder.WriteString(fmt.Sprintf("        message.writeBool(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeBool(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "string":
-		builder.WriteString(fmt.Sprintf("        message.writeString(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeString(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "float":
-		builder.WriteString(fmt.Sprintf("        message.writeFloat(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeFloat(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "double":
-		builder.WriteString(fmt.Sprintf("        message.writeDouble(stream, %d, %s);\n", field.FieldNumber, varName))
+		builder.WriteString(fmt.Sprintf("        writeDouble(stream, %d, %s);\n", field.FieldNumber, varName))
 	case "bytes":
-		builder.WriteString(fmt.Sprintf("        message.writeTag(stream, %d, message.WIRETYPE_LENGTH_DELIMITED);\n", field.FieldNumber))
-		builder.WriteString(fmt.Sprintf("        message.writeBytes(stream, %s);\n", varName))
+		builder.WriteString(fmt.Sprintf("        writeTag(stream, %d, WIRETYPE_LENGTH_DELIMITED);\n", field.FieldNumber))
+		builder.WriteString(fmt.Sprintf("        writeBytes(stream, %s);\n", varName))
 	default:
 		// 处理嵌套消息
-		builder.WriteString(fmt.Sprintf("        if (%s != null) {\n", varName))
+		//builder.WriteString(fmt.Sprintf("        if (%s != null) {\n", varName))
 		builder.WriteString(fmt.Sprintf("            byte[] bytes = %s.toByteArray();\n", varName))
-		builder.WriteString(fmt.Sprintf("            message.writeTag(stream, %d, message.WIRETYPE_LENGTH_DELIMITED);\n", field.FieldNumber))
-		builder.WriteString("            message.writeBytes(stream, bytes);\n")
-		builder.WriteString("        }\n")
+		builder.WriteString(fmt.Sprintf("            writeTag(stream, %d, WIRETYPE_LENGTH_DELIMITED);\n", field.FieldNumber))
+		builder.WriteString("            writeBytes(stream, bytes);\n")
+		//builder.WriteString("        }\n")
 	}
-	return builder.String()
-}
-
-// ParseFrom
-func (jp *JavaProtoc) generateParseFrom(msg *protoc.Message) string {
-	var builder strings.Builder
-	writeParseFromHeader(&builder, msg.Name)
-	writeParseFromBody(&builder, msg)
-	writeParseFromFooter(&builder)
 	return builder.String()
 }
 
@@ -197,9 +197,9 @@ func writeParseFromHeader(builder *strings.Builder, msgName string) {
 
 func writeParseLoop(builder *strings.Builder) {
 	builder.WriteString("            while (stream.available() > 0) {\n")
-	builder.WriteString("                int tag = message.readTag(stream);\n")
-	builder.WriteString("                int fieldNumber = message.getFieldNumberFromTag(tag);\n")
-	builder.WriteString("                int wireType = message.getWireTypeFromTag(tag);\n")
+	builder.WriteString("                int tag = readTag(stream);\n")
+	builder.WriteString("                int fieldNumber = getFieldNumberFromTag(tag);\n")
+	builder.WriteString("                int wireType = getWireTypeFromTag(tag);\n")
 	builder.WriteString("                switch (fieldNumber) {\n")
 }
 
@@ -228,10 +228,10 @@ func generateReadEnumField(field *protoc.Field) string {
 	fieldName := toCamelCase(field.Name, false)
 
 	if field.Repeated {
-		builder.WriteString(fmt.Sprintf("                    result.%s.add(%s.forNumber(message.readInt32(stream)));\n",
+		builder.WriteString(fmt.Sprintf("                    result.%s.add(%s.forNumber(readInt32(stream)));\n",
 			fieldName, toCamelCase(field.TypeName, true)))
 	} else {
-		builder.WriteString(fmt.Sprintf("                    result.%s = %s.forNumber(message.readInt32(stream));\n",
+		builder.WriteString(fmt.Sprintf("                    result.%s = %s.forNumber(readInt32(stream));\n",
 			fieldName, toCamelCase(field.TypeName, true)))
 	}
 
@@ -251,8 +251,8 @@ func writeOneOfCases(builder *strings.Builder, oneofs []*protoc.OneOf) {
 
 func writeDefaultCase(builder *strings.Builder) {
 	builder.WriteString("                    default:\n")
-	builder.WriteString("                        if (wireType == message.WIRETYPE_LENGTH_DELIMITED) {\n")
-	builder.WriteString("                            message.readBytes(stream);\n")
+	builder.WriteString("                        if (wireType == WIRETYPE_LENGTH_DELIMITED) {\n")
+	builder.WriteString("                            readBytes(stream);\n")
 	builder.WriteString("                        }\n")
 	builder.WriteString("                        break;\n")
 	builder.WriteString("                }\n")
@@ -272,19 +272,19 @@ func generateOneofReadField(field *protoc.Field, oneof *protoc.OneOf) string {
 
 	switch field.TypeName {
 	case "int32", "uint32":
-		builder.WriteString(fmt.Sprintf("                        result.%s = message.readInt32(stream);\n", oneofName))
+		builder.WriteString(fmt.Sprintf("                        result.%s = readInt32(stream);\n", oneofName))
 	case "int64", "uint64":
-		builder.WriteString(fmt.Sprintf("                        result.%s = message.readInt64(stream);\n", oneofName))
+		builder.WriteString(fmt.Sprintf("                        result.%s = readInt64(stream);\n", oneofName))
 	case "sint32":
-		builder.WriteString(fmt.Sprintf("                        result.%s = message.readSint32(stream);\n", oneofName))
+		builder.WriteString(fmt.Sprintf("                        result.%s = readSint32(stream);\n", oneofName))
 	case "sint64":
-		builder.WriteString(fmt.Sprintf("                        result.%s = message.readSint64(stream);\n", oneofName))
+		builder.WriteString(fmt.Sprintf("                        result.%s = readSint64(stream);\n", oneofName))
 	case "bool":
-		builder.WriteString(fmt.Sprintf("                        result.%s = message.readBool(stream);\n", oneofName))
+		builder.WriteString(fmt.Sprintf("                        result.%s = readBool(stream);\n", oneofName))
 	case "string":
-		builder.WriteString(fmt.Sprintf("                        result.%s = message.readString(stream);\n", oneofName))
+		builder.WriteString(fmt.Sprintf("                        result.%s = readString(stream);\n", oneofName))
 	default:
-		builder.WriteString(fmt.Sprintf("                        byte[] bytes = message.readBytes(stream);\n"))
+		builder.WriteString(fmt.Sprintf("                        byte[] bytes = readBytes(stream);\n"))
 		builder.WriteString(fmt.Sprintf("                        result.%s = %s.parseFrom(bytes);\n",
 			oneofName, toCamelCase(field.TypeName, true)))
 	}
@@ -299,7 +299,7 @@ func generateMapField(varName string, field *protoc.Field) string {
 		boxed(toJavaType(&protoc.Field{TypeName: field.MapInfo.KeyType})),
 		boxed(toJavaType(&protoc.Field{TypeName: field.MapInfo.ValueType})),
 		varName))
-	builder.WriteString("                message.writeTag(stream, " + strconv.Itoa(field.FieldNumber) + ", message.WIRETYPE_LENGTH_DELIMITED);\n")
+	builder.WriteString("                writeTag(stream, " + strconv.Itoa(field.FieldNumber) + ", WIRETYPE_LENGTH_DELIMITED);\n")
 	builder.WriteString("                java.io.ByteArrayOutputStream mapStream = new java.io.ByteArrayOutputStream();\n")
 
 	// 写入 key
@@ -311,7 +311,7 @@ func generateMapField(varName string, field *protoc.Field) string {
 	builder.WriteString(generateWriteField("entry.getValue()", valueField))
 
 	builder.WriteString("                byte[] mapBytes = mapStream.toByteArray();\n")
-	builder.WriteString("                message.writeBytes(stream, mapBytes);\n")
+	builder.WriteString("                writeBytes(stream, mapBytes);\n")
 	builder.WriteString("            }\n")
 	builder.WriteString("        }\n")
 	return builder.String()
@@ -323,58 +323,58 @@ func generateReadField(field *protoc.Field) string {
 	if field.Repeated {
 		switch field.TypeName {
 		case "int32", "uint32":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readInt32(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readInt32(stream));\n", fieldName))
 		case "int64", "uint64":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readInt64(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readInt64(stream));\n", fieldName))
 		case "sint32":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readSint32(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readSint32(stream));\n", fieldName))
 		case "sint64":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readSint64(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readSint64(stream));\n", fieldName))
 		case "fixed32", "sfixed32":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readFixed32(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readFixed32(stream));\n", fieldName))
 		case "fixed64", "sfixed64":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readFixed64(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readFixed64(stream));\n", fieldName))
 		case "bool":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readBool(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readBool(stream));\n", fieldName))
 		case "string":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readString(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readString(stream));\n", fieldName))
 		case "float":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readFloat(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readFloat(stream));\n", fieldName))
 		case "double":
-			builder.WriteString(fmt.Sprintf("                    result.%s.add(message.readDouble(stream));\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s.add(readDouble(stream));\n", fieldName))
 
 		default:
 			// 处理嵌套消息
-			builder.WriteString(fmt.Sprintf("                    bytes = message.readBytes(stream);\n"))
+			builder.WriteString(fmt.Sprintf("                    bytes = readBytes(stream);\n"))
 			builder.WriteString(fmt.Sprintf("                    result.%s.add(%s.parseFrom(bytes));\n", fieldName, toCamelCase(field.TypeName, true)))
 		}
 	} else {
 		switch field.TypeName {
 		case "int32", "uint32":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readInt32(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readInt32(stream);\n", fieldName))
 		case "int64", "uint64":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readInt64(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readInt64(stream);\n", fieldName))
 		case "sint32":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readSint32(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readSint32(stream);\n", fieldName))
 		case "sint64":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readSint64(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readSint64(stream);\n", fieldName))
 		case "fixed32", "sfixed32":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readFixed32(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readFixed32(stream);\n", fieldName))
 		case "fixed64", "sfixed64":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readFixed64(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readFixed64(stream);\n", fieldName))
 		case "bool":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readBool(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readBool(stream);\n", fieldName))
 		case "string":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readString(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readString(stream);\n", fieldName))
 		case "float":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readFloat(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readFloat(stream);\n", fieldName))
 		case "double":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readDouble(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readDouble(stream);\n", fieldName))
 		case "bytes":
-			builder.WriteString(fmt.Sprintf("                    result.%s = message.readBytes(stream);\n", fieldName))
+			builder.WriteString(fmt.Sprintf("                    result.%s = readBytes(stream);\n", fieldName))
 		default:
 			// 处理嵌套消息
-			builder.WriteString(fmt.Sprintf("                    bytes = message.readBytes(stream);\n"))
+			builder.WriteString(fmt.Sprintf("                    bytes = readBytes(stream);\n"))
 			builder.WriteString(fmt.Sprintf("                    result.%s = %s.parseFrom(bytes);\n", fieldName, toCamelCase(field.TypeName, true)))
 		}
 	}
@@ -385,7 +385,7 @@ func generateReadMapField(field *protoc.Field) string {
 	var builder strings.Builder
 	fieldName := toCamelCase(field.Name, false)
 
-	builder.WriteString("                    byte[] mapBytes = message.readBytes(stream);\n")
+	builder.WriteString("                    byte[] mapBytes = readBytes(stream);\n")
 	builder.WriteString("                    java.io.ByteArrayInputStream mapStream = new java.io.ByteArrayInputStream(mapBytes);\n")
 
 	keyType := toJavaType(&protoc.Field{TypeName: field.MapInfo.KeyType})
@@ -395,8 +395,8 @@ func generateReadMapField(field *protoc.Field) string {
 	builder.WriteString(fmt.Sprintf("                    %s value = %s;\n", valueType, getDefaultValueByStr(field.MapInfo.ValueType)))
 
 	builder.WriteString("                    while (mapStream.available() > 0) {\n")
-	builder.WriteString("                        int mapTag = message.readTag(mapStream);\n")
-	builder.WriteString("                        int mapFieldNumber = message.getFieldNumberFromTag(mapTag);\n")
+	builder.WriteString("                        int mapTag = readTag(mapStream);\n")
+	builder.WriteString("                        int mapFieldNumber = getFieldNumberFromTag(mapTag);\n")
 	builder.WriteString("                        switch (mapFieldNumber) {\n")
 	builder.WriteString("                            case 1: // key\n")
 	builder.WriteString(generateMapKeyRead(field.MapInfo.KeyType))
@@ -416,21 +416,21 @@ func generateReadMapField(field *protoc.Field) string {
 func generateMapKeyRead(keyType string) string {
 	switch keyType {
 	case "int32", "uint32":
-		return "                                key = message.readInt32(mapStream);\n"
+		return "                                key = readInt32(mapStream);\n"
 	case "int64", "uint64":
-		return "                                key = message.readInt64(mapStream);\n"
+		return "                                key = readInt64(mapStream);\n"
 	case "sint32":
-		return "                                key = message.readSint32(mapStream);\n"
+		return "                                key = readSint32(mapStream);\n"
 	case "sint64":
-		return "                                key = message.readSint64(mapStream);\n"
+		return "                                key = readSint64(mapStream);\n"
 	case "fixed32", "sfixed32":
-		return "                                key = message.readFixed32(mapStream);\n"
+		return "                                key = readFixed32(mapStream);\n"
 	case "fixed64", "sfixed64":
-		return "                                key = message.readFixed64(mapStream);\n"
+		return "                                key = readFixed64(mapStream);\n"
 	case "string":
-		return "                                key = message.readString(mapStream);\n"
+		return "                                key = readString(mapStream);\n"
 	case "bool":
-		return "                                key = message.readBool(mapStream);\n"
+		return "                                key = readBool(mapStream);\n"
 	default:
 		return fmt.Sprintf("                                // Unsupported map key type: %s\n", keyType)
 	}
@@ -439,28 +439,28 @@ func generateMapKeyRead(keyType string) string {
 func generateMapValueRead(valueType string) string {
 	switch valueType {
 	case "int32", "uint32":
-		return "                                value = message.readInt32(mapStream);\n"
+		return "                                value = readInt32(mapStream);\n"
 	case "int64", "uint64":
-		return "                                value = message.readInt64(mapStream);\n"
+		return "                                value = readInt64(mapStream);\n"
 	case "sint32":
-		return "                                value = message.readSint32(mapStream);\n"
+		return "                                value = readSint32(mapStream);\n"
 	case "sint64":
-		return "                                value = message.readSint64(mapStream);\n"
+		return "                                value = readSint64(mapStream);\n"
 	case "fixed32", "sfixed32":
-		return "                                value = message.readFixed32(mapStream);\n"
+		return "                                value = readFixed32(mapStream);\n"
 	case "fixed64", "sfixed64":
-		return "                                value = message.readFixed64(mapStream);\n"
+		return "                                value = readFixed64(mapStream);\n"
 	case "bool":
-		return "                                value = message.readBool(mapStream);\n"
+		return "                                value = readBool(mapStream);\n"
 	case "string":
-		return "                                value = message.readString(mapStream);\n"
+		return "                                value = readString(mapStream);\n"
 	case "float":
-		return "                                value = message.readFloat(mapStream);\n"
+		return "                                value = readFloat(mapStream);\n"
 	case "double":
-		return "                                value = message.readDouble(mapStream);\n"
+		return "                                value = readDouble(mapStream);\n"
 	default:
 		// 处理嵌套消息
-		return fmt.Sprintf("                                byte[] bytes = message.readBytes(mapStream);\n"+
+		return fmt.Sprintf("                                byte[] bytes = readBytes(mapStream);\n"+
 			"                                value = %s.parseFrom(bytes);\n", toCamelCase(valueType, true))
 	}
 }

@@ -24,7 +24,6 @@ func (jp *JavaProtoc) generateOuterClass(innerStr strings.Builder) string {
 	} else {
 		fileStr.WriteString("public final class " + toCamelCase(jp.ProtoName, true) + " {\n")
 	}
-	fileStr.WriteString("private static final com.protoc.qiu.GeneratedMessage message = new com.protoc.qiu.GeneratedMessage();\n")
 	fileStr.WriteString(innerStr.String())
 	fileStr.WriteString("}\n")
 
@@ -38,9 +37,9 @@ func (jp *JavaProtoc) generateMessageClass(msg *protoc.Message, inner bool) stri
 
 	// 类声明
 	if inner {
-		builder.WriteString(fmt.Sprintf("public final static class %s {\n", className))
+		builder.WriteString(fmt.Sprintf("public final static class %s extends com.protoc.qiu.GeneratedMessage {\n", className))
 	} else {
-		builder.WriteString(fmt.Sprintf("public final class %s {\n", className))
+		builder.WriteString(fmt.Sprintf("public final class %s extends com.protoc.qiu.GeneratedMessage {\n", className))
 	}
 
 	// 生成字段声明

@@ -1,5 +1,11 @@
 package protoc
 
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
 type WireType int
 
 type Type int
@@ -114,4 +120,78 @@ type Protoc struct {
 type Import struct {
 	Path   string
 	Public bool
+}
+
+func NewProtoc(protoFilePath string) (*Protoc, error) {
+	// read file
+	content, err := os.ReadFile(protoFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read proto file: %v", err)
+	}
+
+	// 解析.proto文件
+	parser := NewParser(strings.NewReader(string(content)))
+	protoc, err := parser.Parse()
+	if err != nil {
+		return nil, fmt.Errorf("proto parse error: %v", err)
+	}
+
+	protoc.fillFieldType()
+
+	return protoc, nil
+}
+
+func (p *Protoc) fillFieldType() {
+	fillMessageFieldType(p.Messages, p.Enums)
+}
+
+func fillMessageFieldType(messages []*Message, enums []*Enum) {
+	for _, message := range messages {
+		// 保存原始 message 引用，因为后面会修改 message 变量
+		originalMessage := message
+
+		// 处理当前消息的字段
+		for _, field := range message.Fields {
+			field.Type = getFieldType(field, originalMessage, enums)
+		}
+
+		// 递归处理内部消息
+		fillMessageFieldType(message.InnerMessages, nil)
+	}
+}
+
+func getFieldType(field *Field, message *Message, enums []*Enum) Type {
+	// 处理基本类型
+	switch field.TypeName {
+	case "int32", "uint32", "sint32", "fixed32", "sfixed32",
+		"int64", "uint64", "sint64", "fixed64", "sfixed64",
+		"string", "double", "float", "bytes", "bool":
+		return BASE
+	}
+
+	// 处理 map 类型
+	if field.MapInfo != nil {
+		return MAP
+	}
+
+	// 在消息层次结构中查找枚举类型
+	currentMsg := message
+	for currentMsg != nil {
+		for _, enum := range currentMsg.Enums {
+			if enum.Name == field.TypeName {
+				return ENUM
+			}
+		}
+		currentMsg = currentMsg.SuperMessage
+	}
+	if enums != nil && len(enums) > 0 {
+		for _, enum := range enums {
+			if enum.Name == field.TypeName {
+				return ENUM
+			}
+		}
+	}
+
+	// 如果都不匹配，则为自定义类型
+	return CUSTOM
 }

@@ -13,61 +13,24 @@ import (
 var _ generator.Generator = (*JavaProtoc)(nil)
 
 type JavaProtoc struct {
-	protoc.Protoc
+	*protoc.Protoc
 	JavaOutput    string
 	ProtoFilePath string
 }
 
 func NewJavaProtoc(javaOutput, protoFilePath string) (*JavaProtoc, error) {
-	// read file
-	content, err := os.ReadFile(protoFilePath)
+	proto, err := protoc.NewProtoc(protoFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read proto file: %v", err)
+		return nil, fmt.Errorf("failed to parse proto file: %v", err)
 	}
 
-	// 解析.proto文件
-	parser := protoc.NewParser(strings.NewReader(string(content)))
-	protoc, err := parser.Parse()
-	if err != nil {
-		return nil, fmt.Errorf("proto parse error: %v", err)
-	}
-
-	fillFieldType(protoc)
-
-	protoc.ProtoName = strings.Split(filepath.Base(protoFilePath), ".")[0]
+	proto.ProtoName = strings.Split(filepath.Base(protoFilePath), ".")[0]
 	return &JavaProtoc{
-		Protoc:        *protoc,
+		Protoc:        proto,
 		JavaOutput:    javaOutput,
 		ProtoFilePath: protoFilePath,
 	}, nil
 
-}
-
-func fillFieldType(p *protoc.Protoc) {
-	for _, message := range p.Messages {
-	LOOP:
-		for _, field := range message.Fields {
-			switch field.TypeName {
-			case "int32", "uint32", "sint32", "fixed32", "sfixed32", "int64", "uint64", "sint64", "fixed64", "sfixed64", "string", "double", "float", "bytes", "bool":
-				field.Type = protoc.BASE
-			default:
-				if field.MapInfo != nil {
-					field.Type = protoc.MAP
-					continue LOOP
-				}
-				for message != nil {
-					for _, enum := range message.Enums {
-						if enum.Name == field.TypeName {
-							field.Type = protoc.ENUM
-							continue LOOP
-						}
-					}
-					message = message.SuperMessage
-				}
-				field.Type = protoc.CUSTOM
-			}
-		}
-	}
 }
 
 // Generate .java file

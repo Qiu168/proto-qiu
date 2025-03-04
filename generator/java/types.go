@@ -99,6 +99,9 @@ func getDefaultValueByStr(str string) string {
 
 // 工具函数：下划线命名转驼峰
 func toCamelCase(s string, firstUpper bool) string {
+	if len(strings.Split(s, ".")) > 1 {
+		return s
+	}
 	parts := strings.Split(s, "_")
 	for i := range parts {
 		if firstUpper && i == 0 {

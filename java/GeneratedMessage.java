@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-public class GeneratedMessage {
+public abstract class GeneratedMessage {
     public static final int WIRETYPE_VARINT = 0;
     public static final int WIRETYPE_FIXED64 = 1;
     public static final int WIRETYPE_LENGTH_DELIMITED = 2;
@@ -242,4 +242,9 @@ public class GeneratedMessage {
     public long readUint64(ByteArrayInputStream stream){
         return readInt64(stream);
     }
+
+    public abstract byte[] toByteArray();
+    
+    // static
+    // public abstract GeneratedMessage parseFrom(byte[] bytes);
 }

@@ -1,7 +1,6 @@
 package java
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"proto-qiu/protoc"
@@ -34,17 +33,6 @@ func TestToJavaType(t *testing.T) {
 			t.Errorf("toJavaType(%v) = %v, want %v", field, toJavaType(field), ans[i])
 		}
 	}
-}
-
-func TestNewJavaProtoc(t *testing.T) {
-	os.Chdir("../../")
-	proto, err := NewJavaProtoc("", "./proto/example.proto")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// print protoc
-	protoJson, _ := json.MarshalIndent(proto, "", "\t")
-	fmt.Println(string(protoJson))
 }
 
 func TestGenerateOuterClass(t *testing.T) {
