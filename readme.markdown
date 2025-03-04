@@ -60,8 +60,10 @@ proto-qiu/
 ```
 
 ## test in project
-### example\proto3\ExampleTest.java
+## generator/java/protoc_java_test.go
 test generate .java
+### example\proto3\ExampleTest.java
+test generated .java
 ### java\AnyTest.java
 test my Any impl
 ### java\GeneratedMessageCompareTest.java
