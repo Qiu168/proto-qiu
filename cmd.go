@@ -21,7 +21,7 @@ func parseCmd() *Cmd {
 	flag.Parse()
 	args := flag.Args()
 	if len(args) > 0 {
-		cmd.protocPath = args[1:]
+		cmd.protocPath = args
 	}
 	return cmd
 }
