@@ -11,7 +11,7 @@ public abstract class GeneratedMessage {
     public static final int WIRETYPE_START_GROUP = 3;
     public static final int WIRETYPE_END_GROUP = 4;
     public static final int WIRETYPE_FIXED32 = 5;
-  
+
     public static void writeTag(ByteArrayOutputStream stream, int fieldNumber, int wireType){
         writeVarint32(stream, (fieldNumber << 3) | wireType);
     }
@@ -20,6 +20,10 @@ public abstract class GeneratedMessage {
         writeBytes(stream, str.getBytes());
     }
     public static void writeVarint32(ByteArrayOutputStream stream, int value){
+        if(value < 0){
+            writeVarint64(stream, value);
+            return;
+        }
         while (true) {
             if ((value & ~0x7F) == 0) {
                 stream.write(value);
@@ -29,7 +33,7 @@ public abstract class GeneratedMessage {
                 value >>>= 7;
             }
         }
-    }   
+    }
     public static void writeInt32(ByteArrayOutputStream stream, int fieldNumber, int value){
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         writeVarint32(stream, value);
@@ -42,7 +46,7 @@ public abstract class GeneratedMessage {
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         writeVarint32(stream, value);
     }
-    
+
     public static void writeUint64(ByteArrayOutputStream stream, int fieldNumber, long value){
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         writeVarint64(stream, value);
@@ -51,17 +55,24 @@ public abstract class GeneratedMessage {
         writeVarint32(stream, bytes.length);
         stream.write(bytes);
     }
-    public static void writeVarint64(ByteArrayOutputStream stream, long value){
+    public static void writeVarint64(ByteArrayOutputStream stream, long value) {
+        // 无符号处理 64 位值
         while (true) {
-            if ((value & ~0x7F) == 0) {
-                stream.write((int) value);
-                return;
+            // 取低 7 位
+            int b = (int) (value & 0x7F);
+            // 无符号右移 7 位（高位补 0）
+            value >>>= 7;
+            if (value == 0) {
+                // 无后续字节，直接写入并结束
+                stream.write(b);
+                break;
             } else {
-                stream.write(((int) value & 0x7F) | 0x80);
-                value >>>= 7;
+                // 设置最高位（表示后续还有字节），写入当前字节
+                stream.write(b | 0x80);
             }
         }
     }
+
     public static void writeFloat(ByteArrayOutputStream stream, int fieldNumber, float value){
         writeFixed32(stream,fieldNumber, Float.floatToIntBits(value));
     }
@@ -72,7 +83,7 @@ public abstract class GeneratedMessage {
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         stream.write(value ? 1 : 0);
     }
-    
+
     public static void writeEnum(ByteArrayOutputStream stream, int fieldNumber, int value){
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         writeVarint32(stream, value);
@@ -81,29 +92,29 @@ public abstract class GeneratedMessage {
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         writeVarint32(stream, (value << 1) ^ (value >> 31));
     }
-    
+
     public static void writeSint64(ByteArrayOutputStream stream, int fieldNumber, long value){
         writeTag(stream, fieldNumber, WIRETYPE_VARINT);
         writeVarint64(stream, (value << 1) ^ (value >> 63));
     }
     public static void writeFixed32(ByteArrayOutputStream stream, int fieldNumber, int value){
         writeTag(stream, fieldNumber, WIRETYPE_FIXED32);
-        stream.write(value >> 24);
-        stream.write(value >> 16);
-        stream.write(value >> 8);
         stream.write(value);
+        stream.write(value >> 8);
+        stream.write(value >> 16);
+        stream.write(value >> 24);
     }
-    
+
     public static void writeFixed64(ByteArrayOutputStream stream, int fieldNumber, long value){
         writeTag(stream, fieldNumber, WIRETYPE_FIXED64);
-        stream.write((int) (value >> 56));
-        stream.write((int) (value >> 48));
-        stream.write((int) (value >> 40));
-        stream.write((int) (value >> 32));
-        stream.write((int) (value >> 24));
-        stream.write((int) (value >> 16));
-        stream.write((int) (value >> 8));
         stream.write((int) value);
+        stream.write((int) (value >> 8));
+        stream.write((int) (value >> 16));
+        stream.write((int) (value >> 24));
+        stream.write((int) (value >> 32));
+        stream.write((int) (value >> 40));
+        stream.write((int) (value >> 48));
+        stream.write((int) (value >> 56));
     }
     public static void writeSFixed32(ByteArrayOutputStream stream, int fieldNumber, int value){
         writeFixed32(stream,fieldNumber, value);
@@ -163,11 +174,11 @@ public abstract class GeneratedMessage {
         int tag = readVarint32(stream);
         return tag;
     }
-    
+
     public static int getFieldNumberFromTag(int tag) {
         return tag >>> 3;
     }
-    
+
     public static int getWireTypeFromTag(int tag) {
         return tag & 0x7;
     }
@@ -210,26 +221,27 @@ public abstract class GeneratedMessage {
         if (stream.read(bytes) != 4) {
             throw new RuntimeException("Malformed fixed32");
         }
-        return ((bytes[0] & 0xFF) << 24) 
-             | ((bytes[1] & 0xFF) << 16) 
-             | ((bytes[2] & 0xFF) << 8) 
-             | (bytes[3] & 0xFF);
+        return (bytes[0] & 0xFF)
+                | ((bytes[1] & 0xFF) << 8)
+                | ((bytes[2] & 0xFF) << 16)
+                | ((bytes[3] & 0xFF) << 24);
     }
-    
+
     public static long readFixed64(ByteArrayInputStream stream) throws IOException {
         byte[] bytes = new byte[8];
         if (stream.read(bytes) != 8) {
             throw new RuntimeException("Malformed fixed64");
         }
-        return ((long)(bytes[0] & 0xFF) << 56)
-             | ((long)(bytes[1] & 0xFF) << 48)
-             | ((long)(bytes[2] & 0xFF) << 40)
-             | ((long)(bytes[3] & 0xFF) << 32)
-             | ((long)(bytes[4] & 0xFF) << 24)
-             | ((long)(bytes[5] & 0xFF) << 16)
-             | ((long)(bytes[6] & 0xFF) << 8)
-             | (bytes[7] & 0xFF);
+        return (bytes[0] & 0xFFL)
+                | ((bytes[1] & 0xFFL) << 8)
+                | ((bytes[2] & 0xFFL) << 16)
+                | ((bytes[3] & 0xFFL) << 24)
+                | ((bytes[4] & 0xFFL) << 32)
+                | ((bytes[5] & 0xFFL) << 40)
+                | ((bytes[6] & 0xFFL) << 48)
+                | ((bytes[7] & 0xFFL) << 56);
     }
+
     public static int readSFixed32(ByteArrayInputStream stream) throws IOException {
         return readFixed32(stream);
     }
@@ -244,7 +256,7 @@ public abstract class GeneratedMessage {
     }
 
     public abstract byte[] toByteArray();
-    
+
     // static
     // public abstract GeneratedMessage parseFrom(byte[] bytes);
 }
