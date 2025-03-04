@@ -123,25 +123,32 @@ public abstract class GeneratedMessage {
         writeFixed64(stream,fieldNumber, value);
     }
 
-    public static int readVarint32(ByteArrayInputStream stream){
-        int value = 0;
+    public static int readVarint32(ByteArrayInputStream stream) {
+        long result = 0;
         int shift = 0;
+        while (shift < 32) {
+            int b = stream.read();
+            if (b == -1) {
+                throw new RuntimeException("Malformed varint");
+            }
+            result |= (long)(b & 0x7F) << shift;
+            if ((b & 0x80) == 0) {
+                return (int)result;
+            }
+            shift += 7;
+        }
+        // 继续读取剩余字节，但不再累加到结果中
         while (true) {
             int b = stream.read();
             if (b == -1) {
                 throw new RuntimeException("Malformed varint");
             }
-            value |= (b & 0x7F) << shift;
             if ((b & 0x80) == 0) {
-                return value;
-            }
-            shift += 7;
-            if (shift >= 32) {
-                throw new RuntimeException("Malformed varint");
+                break;
             }
         }
+        return (int)result;
     }
-
     public static long readVarint64(ByteArrayInputStream stream){
         long value = 0;
         int shift = 0;

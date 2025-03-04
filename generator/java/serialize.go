@@ -122,14 +122,11 @@ func writeMapField(builder *strings.Builder, fieldName string, field *protoc.Fie
 func writeMapKeyValue(builder *strings.Builder, field *protoc.Field) {
 	builder.WriteString("                writeTag(stream, " +
 		strconv.Itoa(field.FieldNumber) + ", WIRETYPE_LENGTH_DELIMITED);\n")
-	builder.WriteString("                java.io.ByteArrayOutputStream mapStream = new java.io.ByteArrayOutputStream();\n")
-
-	keyField := &protoc.Field{TypeName: field.MapInfo.KeyType, FieldNumber: 1}
-	valueField := &protoc.Field{TypeName: field.MapInfo.ValueType, FieldNumber: 2}
-
-	builder.WriteString(generateWriteField("entry.getKey()", keyField))
-	builder.WriteString(generateWriteField("entry.getValue()", valueField))
-	builder.WriteString("                byte[] mapBytes = mapStream.toByteArray();\n")
+	javaType := toCamelCase(field.TypeName, true)
+	builder.WriteString("                " + javaType + " e =new " + javaType + "();\n")
+	builder.WriteString("                e.setKey(entry.getKey());\n")
+	builder.WriteString("                e.setValue(entry.getValue());\n")
+	builder.WriteString("                byte[] mapBytes = e.toByteArray();\n")
 	builder.WriteString("                writeBytes(stream, mapBytes);\n")
 }
 
